@@ -19,10 +19,21 @@ class TestReview:
     def test_can_be_saved_to_database(self):
         '''can be added to a transaction and committed to review table with comment column.'''
         with app.app_context():
+            # Ensure the Review table has a 'comment' column
             assert 'comment' in Review.__table__.columns
-            r = Review(comment='great!')
+
+            # Create a customer and item for the foreign key relationships
+            customer = Customer(name='Test Customer')
+            item = Item(name='Test Item', price=10.99)
+            db.session.add_all([customer, item])
+            db.session.commit()
+
+            # Create a Review and associate it with the customer and item
+            r = Review(comment='great!', customer_id=customer.id, item_id=item.id)
             db.session.add(r)
             db.session.commit()
+
+            # Assert that the review was saved successfully
             assert hasattr(r, 'id')
             assert db.session.query(Review).filter_by(id=r.id).first()
 
@@ -32,19 +43,22 @@ class TestReview:
             assert 'customer_id' in Review.__table__.columns
             assert 'item_id' in Review.__table__.columns
 
-            c = Customer()
-            i = Item()
+            # Create customer and item records
+            c = Customer(name='Relationship Test Customer')
+            i = Item(name='Relationship Test Item', price=20.00)
             db.session.add_all([c, i])
             db.session.commit()
 
+            # Create and save a Review object related to the customer and item
             r = Review(comment='great!', customer=c, item=i)
             db.session.add(r)
             db.session.commit()
 
-            # check foreign keys
+            # Check foreign keys
             assert r.customer_id == c.id
             assert r.item_id == i.id
-            # check relationships
+
+            # Check relationships
             assert r.customer == c
             assert r.item == i
             assert r in c.reviews
